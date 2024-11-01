@@ -2,7 +2,6 @@
 pragma solidity ^0.6.12;
 
 import "./BentoBoxV1.sol"; // Import BentoBoxV1 contract
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // Import ERC20 interface
 
 contract MaliciousContract {
     address public owner;

