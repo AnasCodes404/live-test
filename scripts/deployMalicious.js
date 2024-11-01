@@ -11,6 +11,8 @@ async function main() {
     const targetContractAddress = "0x5456070082e58Fa63F0aDacB5f4527da25BD7454"; // Replace with your target contract address
 
     const MaliciousContract = await ethers.getContractFactory("MaliciousContract");
+    
+    // Deploy the MaliciousContract with only the target contract address as an argument
     const maliciousContract = await MaliciousContract.deploy(targetContractAddress);
 
     console.log("MaliciousContract deployed to:", maliciousContract.address);

