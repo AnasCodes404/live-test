@@ -7,7 +7,7 @@ async function main() {
 
     console.log("Configured attacker address:", attacker.address);
 
-    const maliciousContractAddress = "0xFfde19E32cC0B94Eb1208C40ABA992a3eB501ba8"; // Updated address of the MaliciousContract
+    const maliciousContractAddress = "0x5456070082e58Fa63F0aDacB5f4527da25BD7454"; // Updated address of the MaliciousContract
     const targetContractAddress = "0x5456070082e58Fa63F0aDacB5f4527da25BD7454"; // Address of the contract being attacked
 
     const MaliciousContract = new ethers.Contract(

