@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "commonjs",
   "scripts": {
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "slither": "./slither-env/bin/slither ."
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",

