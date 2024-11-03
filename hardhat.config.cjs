@@ -4,7 +4,7 @@ require("@nomiclabs/hardhat-ethers");
 
 module.exports = {
   solidity: {
-    version: "0.6.12", // Update to match your Solidity version
+    version: "0.6.12", // Ensure this matches your Solidity version
     settings: {
       optimizer: {
         enabled: true,
